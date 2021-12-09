@@ -1,25 +1,81 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
-import Home from '../views/Home.vue'
+import { createRouter, createWebHistory } from 'vue-router'
+import axios from 'axios'
+import Home from './views/Home.vue'
+import Login from './views/Login.vue'
+import Signup from './views/Signup.vue'
+import ColumnDetail from './views/ColumnDetail.vue'
+import CreatePost from './views/CreatePost.vue'
+import PostDetail from './views/PostDetail.vue'
+import store from './store'
 
-const routes: Array<RouteRecordRaw> = [
-  {
-    path: '/',
-    name: 'Home',
-    component: Home
-  },
-  {
-    path: '/about',
-    name: 'About',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')
-  }
-]
+const routerHistory = createWebHistory()
 
 const router = createRouter({
-  history: createWebHistory(process.env.BASE_URL),
-  routes
+  history: routerHistory,
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: Home
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: Login,
+      meta: { redirectAlreadyLogin:true }
+    },
+    {
+      path: '/signup',
+      name: 'signup',
+      component: Signup,
+      meta: { redirectAlreadyLogin: true }
+    },
+    {
+      path: '/create',
+      name: 'create',
+      component: CreatePost,
+      meta: { requiredLogin: true }
+    },
+    {
+      path: '/column/:id',
+      name: 'column',
+      component: ColumnDetail
+    },
+    {
+      path: '/posts/:id',
+      name: 'post',
+      component: PostDetail
+    }
+  ]
 })
+
+router.beforeEach(to, from, next) => {
+  const { user, token } = store.state
+  const { requiredLogin, redirectAlreadyLogin } = to.meta
+  if(!user.isLogin) {
+    if (token) {
+      axios.defaults.headers.common.Authorization = `Name ${token}`
+      store.dispatch('fetchCurrentUser').then(() => {
+        if (redirectAlreadyLogin) {
+          next('/')
+        } else {
+          next()
+        }
+      })
+    } else {
+      if (requiredLogin) {
+        next('login')
+      } else {
+        next()
+      }
+    }
+  } else {
+    if (redirectAlreadyLogin) {
+      next('/')
+    } else {
+      next()
+    }
+  }
+}
 
 export default router
